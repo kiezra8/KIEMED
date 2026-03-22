@@ -95,7 +95,7 @@ const WHATSAPP_NUMBER = '256702370441';
 
 // --- Components ---
 
-const Navbar = ({ cartCount, onSearch }) => {
+const Navbar = ({ onSearch }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
@@ -112,12 +112,6 @@ const Navbar = ({ cartCount, onSearch }) => {
       <div className="nav-top">
         <Link to="/" className="logo">KIE<span>MED</span></Link>
         <div className="nav-icons desktop-only">
-          <Link to="/chat" className="nav-icon-btn"><MessageCircle size={24} /><span>Chat</span></Link>
-          <Link to="/cart" className="nav-icon-btn">
-            <ShoppingCart size={24} />
-            {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
-            <span>Cart</span>
-          </Link>
           <Link to="/account" className="nav-icon-btn"><User size={24} /><span>Account</span></Link>
         </div>
       </div>
@@ -135,11 +129,11 @@ const Navbar = ({ cartCount, onSearch }) => {
   );
 };
 
-const BottomNav = ({ cartCount }) => (
+const BottomNav = ({ cartCount, onChatPress }) => (
   <div className="bottom-nav">
     <Link to="/" className="nav-icon-btn"><HomeIcon size={24} /><span>Home</span></Link>
     <Link to="/categories" className="nav-icon-btn"><LayoutGrid size={24} /><span>Categories</span></Link>
-    <Link to="/chat" className="nav-icon-btn"><MessageCircle size={24} /><span>Chat</span></Link>
+    <button onClick={onChatPress} className="nav-icon-btn"><MessageCircle size={24} /><span>Chat</span></button>
     <Link to="/cart" className="nav-icon-btn">
       <ShoppingCart size={24} />
       {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
@@ -217,10 +211,8 @@ const ProductCard = ({ product, addToCart }) => (
   </motion.div>
 );
 
-const Home = ({ addToCart }) => (
+const HomeContent = ({ addToCart }) => (
   <div className="fade-in">
-    <HeroSlider />
-    
     <div className="category-grid">
       {DATA.categories.map(cat => (
         <Link to={`/category/${cat.id}`} key={cat.id} className="category-item">
@@ -246,6 +238,22 @@ const Home = ({ addToCart }) => (
     <div className="product-grid">
       {DATA.categories.flatMap(c => c.classes).flatMap(cl => cl.products).map(p => (
         <ProductCard key={p.id} product={p} addToCart={addToCart} />
+      ))}
+    </div>
+  </div>
+);
+
+const CategoriesPage = () => (
+  <div className="fade-in p-4">
+    <h2 className="mb-6 text-xl font-bold">Store Categories</h2>
+    <div className="grid grid-cols-2 gap-4">
+      {DATA.categories.map(cat => (
+        <Link to={`/category/${cat.id}`} key={cat.id} className="p-4 bg-white rounded-xl shadow-sm flex flex-col items-center gap-3">
+          <div className="w-16 h-16 rounded-full overflow-hidden border">
+            <img src={cat.icon} className="w-full h-full object-cover" />
+          </div>
+          <span className="font-bold text-sm text-center">{cat.name}</span>
+        </Link>
       ))}
     </div>
   </div>
@@ -302,27 +310,7 @@ const ClassPage = ({ addToCart }) => {
   );
 };
 
-const ChatPage = () => (
-  <div className="fade-in p-6 text-center">
-    <h2 className="mb-6 text-2xl font-bold">Contact Support</h2>
-    <div className="flex flex-col gap-4">
-      <a 
-        href={`https://wa.me/${WHATSAPP_NUMBER}`} 
-        className="flex items-center justify-center gap-3 p-4 bg-green-500 text-white rounded-xl font-bold"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <MessageCircle size={24} /> Chat on WhatsApp
-      </a>
-      <a 
-        href={`tel:+${WHATSAPP_NUMBER}`} 
-        className="flex items-center justify-center gap-3 p-4 bg-blue-600 text-white rounded-xl font-bold"
-      >
-        <Phone size={24} /> Call Support
-      </a>
-    </div>
-  </div>
-);
+// Remove ChatPage as it's now a modal
 
 const CartPage = ({ cart, updateQty, removeItem }) => {
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
@@ -386,6 +374,7 @@ const CartPage = ({ cart, updateQty, removeItem }) => {
 function App() {
   const [cart, setCart] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
+  const [showChatModal, setShowChatModal] = useState(false);
   
   const addToCart = (product) => {
     setCart(prev => {
@@ -417,14 +406,19 @@ function App() {
 
   return (
     <div className="app-wrapper">
-      <Navbar cartCount={cart.length} onSearch={handleSearch} />
+      <Navbar onSearch={handleSearch} />
       
+      {/* Move Hero outside container for edge-to-edge width on mobile */}
+      <Routes>
+        <Route path="/" element={<HeroSlider />} />
+      </Routes>
+
       <main className="container">
         <Routes>
-          <Route path="/" element={<Home addToCart={addToCart} />} />
+          <Route path="/" element={<HomeContent addToCart={addToCart} />} />
+          <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/class/:catId/:classId" element={<ClassPage addToCart={addToCart} />} />
-          <Route path="/chat" element={<ChatPage />} />
           <Route path="/cart" element={<CartPage cart={cart} updateQty={updateQty} removeItem={removeItem} />} />
           <Route path="/search" element={
             <div className="fade-in">
@@ -433,7 +427,7 @@ function App() {
                 {searchResults.length > 0 ? (
                   searchResults.map(p => <ProductCard key={p.id} product={p} addToCart={addToCart} />)
                 ) : (
-                  <div className="col-span-2 text-center py-20 text-gray-500">No products found</div>
+                  <div className="col-span-3 text-center py-20 text-gray-500">No products found</div>
                 )}
               </div>
             </div>
@@ -442,7 +436,43 @@ function App() {
         </Routes>
       </main>
 
-      <BottomNav cartCount={cart.length} />
+      <BottomNav cartCount={cart.length} onChatPress={() => setShowChatModal(true)} />
+
+      {/* Chat Modal */}
+      <AnimatePresence>
+        {showChatModal && (
+          <div className="chat-modal-overlay" onClick={() => setShowChatModal(false)}>
+            <motion.div 
+              className="chat-modal"
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold">Contact Support</h3>
+                <button onClick={() => setShowChatModal(false)}><X size={24}/></button>
+              </div>
+              <div className="flex flex-col gap-4">
+                <a 
+                  href={`https://wa.me/${WHATSAPP_NUMBER}`} 
+                  className="flex items-center justify-center gap-3 p-5 bg-green-500 text-white rounded-2xl font-bold text-lg"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle size={28} /> WhatsApp Support
+                </a>
+                <a 
+                  href={`tel:+${WHATSAPP_NUMBER}`} 
+                  className="flex items-center justify-center gap-3 p-5 bg-blue-600 text-white rounded-2xl font-bold text-lg"
+                >
+                  <Phone size={28} /> Call Support
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
